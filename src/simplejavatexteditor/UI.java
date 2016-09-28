@@ -142,7 +142,7 @@ public class UI extends JFrame implements ActionListener {
         errorText.setEditable(false);
         errorText.setText("Welcome to Elastic PL Editor 1.0\nHere, you will see compiler error and warnings.");
         getContentPane().add(splitPane2);
-
+errorText.setFont(Font.getFont(Font.MONOSPACED));
         // Set the Menus
         menuFile = new JMenu("File");
         menuEdit = new JMenu("Edit");
