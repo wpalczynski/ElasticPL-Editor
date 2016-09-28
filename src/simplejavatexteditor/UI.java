@@ -17,6 +17,9 @@
  *
  * @modifiedby  Marcus Redgrave-Close
  * @modemail   	marcusrc1@hotmail.co.uk
+ * 
+ * @modifiedby  Elastic Community
+
  */
 package simplejavatexteditor;
 
