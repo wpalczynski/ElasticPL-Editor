@@ -326,7 +326,7 @@ public class UI extends JFrame implements ActionListener {
 			if(tooMuchStackUsage){
 				errorText.append("[!] aborted execution" + "\n");
 			}else{
-				errorText.append("[!] AST depth: " + ((ASTCompilationUnit) parser.rootNode()).getDepth());
+				errorText.append("[!] AST depth: " + ((ASTCompilationUnit) parser.rootNode()).getDepth()+ "\n");
 				long WCET = RuntimeEstimator.worstWeight((SimpleNode) parser.rootNode());
 				errorText.append("[!] Worst case execution time: " + WCET + "\n");
 				parser.rootNode().interpret();
