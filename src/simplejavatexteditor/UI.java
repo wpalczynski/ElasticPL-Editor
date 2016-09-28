@@ -21,6 +21,7 @@
 
 package simplejavatexteditor;
 
+import elastic.pl.interpreter.*;
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
@@ -29,32 +30,40 @@ import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Scanner;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.text.DefaultEditorKit;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
 
 public class UI extends JFrame implements ActionListener {
 
 	private static final long serialVersionUID = 1L;
 	private final Container container;
-	private final JTextArea textArea;
+	private final RSyntaxTextArea textArea;
 	private final JMenuBar menuBar;
-	private final JMenu menuFile, menuEdit, menuFind, menuAbout;
-	private final JMenuItem newFile, openFile, saveFile, close, cut, copy, paste, clearFile, selectAll, quickFind,
-			aboutMe, aboutSoftware;
+	private final JMenu menuFile, menuEdit, menuFind;
+	private final JMenuItem newFile, openFile, saveFile, close, cut, copy, paste, clearFile, selectAll, quickFind;
 	private final JToolBar mainToolbar;
-	JButton newButton, openButton, saveButton, clearButton, quickButton, aboutMeButton, aboutButton, closeButton,
+	JButton newButton, openButton, saveButton, clearButton, quickButton, execButton,
 			spaceButton1, spaceButton2;
 	private final Action selectAllAction;
-
+        private JTextArea errorText;
 	// setup icons - File Menu
 	private final ImageIcon newIcon = new ImageIcon("icons/new.png");
 	private final ImageIcon openIcon = new ImageIcon("icons/open.png");
 	private final ImageIcon saveIcon = new ImageIcon("icons/save.png");
-	private final ImageIcon closeIcon = new ImageIcon("icons/close.png");
+	private final ImageIcon closeIcon = new ImageIcon("icons/run.png");
 
 	// setup icons - Edit Menu
 	private final ImageIcon clearIcon = new ImageIcon("icons/clear.png");
@@ -65,42 +74,87 @@ public class UI extends JFrame implements ActionListener {
 
 	// setup icons - Search Menu
 	private final ImageIcon searchIcon = new ImageIcon("icons/search.png");
-
-	// setup icons - Help Menu
-	private final ImageIcon aboutMeIcon = new ImageIcon("icons/about_me.png");
-	private final ImageIcon aboutIcon = new ImageIcon("icons/about.png");
+        private DefaultTableModel model;
 
 	AutoComplete autocomplete;
 	private boolean hasListener = false;
-
+        private JTable table;
 	public UI() {
+            
+            try {
+                // Set the Look and Feel of the application to the operating
+                // system's look and feel.
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            }
+            catch (ClassNotFoundException e) {
+            }
+            catch (InstantiationException e) {
+            }
+            catch (IllegalAccessException e) {
+            }
+            catch (UnsupportedLookAndFeelException e) {
+            }
+
 		container = getContentPane();
 
 		// Set the initial size of the window
-		setSize(700, 500);
+		setSize(900, 800);
 
 		// Set the title of the window
 		setTitle("Untitled | " + SimpleJavaTextEditor.NAME);
+                
+                
 
 		// Set the default close operation (exit when it gets closed)
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 
 		// Set a default font for the TextArea
-		textArea = new JTextArea("", 0,0);
+		textArea = new RSyntaxTextArea("", 0,0);
 		textArea.setFont(new Font("Century Gothic", Font.BOLD, 12));
 		textArea.setTabSize(2);
 		textArea.setFont(new Font("Century Gothic", Font.BOLD, 12));
 		textArea.setTabSize(2);
-
+                textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+                textArea.setCodeFoldingEnabled(true);
+                textArea.setShowMatchedBracketPopup(true);
+                
+                errorText = new JTextArea();
+                errorText.setBackground(Color.BLACK);
+                errorText.setForeground(Color.WHITE);
 		// This is why we didn't have to worry about the size of the TextArea!
 		getContentPane().setLayout(new BorderLayout()); // the BorderLayout bit makes it fill it automatically
-		getContentPane().add(textArea);
+		
+                RTextScrollPane sp = new RTextScrollPane(textArea);
+                model = new DefaultTableModel();
+                table = new JTable(model);
+                model.addColumn("Memslot");
+                model.addColumn("Value");
+               
+               
+                //Create a split pane with the two scroll panes in it.
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+                                           new JScrollPane(table), sp);
+                splitPane.setOneTouchExpandable(true);
+                splitPane.setDividerLocation(250);
+
+                //Provide minimum sizes for the two components in the split pane
+                Dimension minimumSize = new Dimension(250, 50);
+                table.setMinimumSize(minimumSize);
+                
+                 //Create a split pane with the two scroll panes in it.
+                JSplitPane splitPane2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+                                           splitPane, errorText);
+               splitPane2.setResizeWeight(0.6);
+               splitPane2.setDividerLocation(450);
+  errorText.setEditable(false);
+  errorText.setText("Welcome to Elastic PL Editor 1.0\nHere, you will see compiler error and warnings.");
+                getContentPane().add(splitPane2);
+
 
 		// Set the Menus
 		menuFile = new JMenu("File");
 		menuEdit = new JMenu("Edit");
 		menuFind = new JMenu("Search");
-		menuAbout = new JMenu("About");
 
 		// Set the Items Menu
 		newFile = new JMenuItem("New", newIcon);
@@ -109,16 +163,13 @@ public class UI extends JFrame implements ActionListener {
 		close = new JMenuItem("Quit", closeIcon);
 		clearFile = new JMenuItem("Clear", clearIcon);
 		quickFind = new JMenuItem("Quick", searchIcon);
-		aboutMe = new JMenuItem("About Me", aboutMeIcon);
-		aboutSoftware = new JMenuItem("About Software", aboutIcon);
+		
 
 		// Set the Menu Bar into the our GUI
 		menuBar = new JMenuBar();
 		menuBar.add(menuFile);
 		menuBar.add(menuEdit);
 		menuBar.add(menuFind);
-		menuBar.add(menuAbout);
-
 		this.setJMenuBar(menuBar);
 
 		// Set Actions:
@@ -197,15 +248,6 @@ public class UI extends JFrame implements ActionListener {
 		quickFind.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_MASK));
 		menuFind.add(quickFind);
 
-		// About Me
-		aboutMe.addActionListener(this);
-		aboutMe.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
-		menuAbout.add(aboutMe);
-
-		// About Software
-		aboutSoftware.addActionListener(this);
-		aboutSoftware.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0));
-		menuAbout.add(aboutSoftware);
 
 		mainToolbar = new JToolBar();
 		this.add(mainToolbar, BorderLayout.NORTH);
@@ -246,26 +288,16 @@ public class UI extends JFrame implements ActionListener {
 		spaceButton1.setBorder(emptyBorder);
 		mainToolbar.add(spaceButton1);
 
-		aboutMeButton = new JButton(aboutMeIcon);
-		aboutMeButton.setToolTipText("About Me");
-		aboutMeButton.addActionListener(this);
-		mainToolbar.add(aboutMeButton);
-		mainToolbar.addSeparator();
-
-		aboutButton = new JButton(aboutIcon);
-		aboutButton.setToolTipText("About NotePad PH");
-		aboutButton.addActionListener(this);
-		mainToolbar.add(aboutButton);
 
 		// create space between button groups
 		spaceButton2 = new JButton();
 		spaceButton2.setBorder(emptyBorder);
 		mainToolbar.add(spaceButton2);
 
-		closeButton = new JButton(closeIcon);
-		closeButton.setToolTipText("Quit");
-		closeButton.addActionListener(this);
-		mainToolbar.add(closeButton);
+		execButton = new JButton(closeIcon);
+		execButton.setToolTipText("Execute Program");
+		execButton.addActionListener(this);
+		mainToolbar.add(execButton);
 	}
 
 	// Make the TextArea available to the autocomplete handler
@@ -273,10 +305,59 @@ public class UI extends JFrame implements ActionListener {
 		return textArea;
 	}
 
+        
+        public void executeCode(){
+            while(model.getRowCount()>0){
+                model.removeRow(0);
+            }
+           InputStream is = new ByteArrayInputStream(getEditor().getText().getBytes());
+            ElasticPLParser parser = new ElasticPLParser(is);
+		errorText.setText("");
+		try {
+			parser.CompilationUnit();
+			((ASTCompilationUnit) parser.rootNode()).reset();
+			((ASTCompilationUnit) parser.rootNode()).fillRandomIntNumber();
+
+			boolean tooMuchStackUsage = RuntimeEstimator.exceedsStackUsage((SimpleNode) parser.rootNode());
+
+			
+
+			errorText.append("[!] Stack usage exceeded: " + tooMuchStackUsage + "\n");
+			if(tooMuchStackUsage){
+				errorText.append("[!] aborted execution" + "\n");
+			}else{
+				errorText.append("[!] AST depth: " + ((ASTCompilationUnit) parser.rootNode()).getDepth());
+				long WCET = RuntimeEstimator.worstWeight((SimpleNode) parser.rootNode());
+				errorText.append("[!] Worst case execution time: " + WCET + "\n");
+				parser.rootNode().interpret();
+			}
+
+			
+		} catch (ParseException e) {
+			errorText.append("Elastic Programming Language Interpreter Version 0.1:  Encountered errors during parse: " + e.getMessage() + "\n");
+			return;
+		} catch (Exception e1) {
+			errorText.append("Elastic Programming Language Interpreter Version 0.1:  Encountered errors during interpretation/tree building." + "\n");
+                        return;
+		}
+
+                LinkedHashMap<String, Integer> MP = ((ASTCompilationUnit) parser.rootNode()).getNotNullDumpState();
+                
+                Iterator<String> keySetIterator = MP.keySet().iterator();
+
+                while(keySetIterator.hasNext()){
+                  String key = keySetIterator.next();
+                  model.addRow(new Object[] { key , MP.get(key)});;
+                }
+		errorText.append("[!] Exit Stack Pointer: " + MyNode.top + "\n");
+		boolean bountyFound = ((ASTCompilationUnit) parser.rootNode()).verifyBounty();
+		errorText.append("[!] Bounty requirement met: " + bountyFound + "\n");
+	
+        }
 	public void actionPerformed (ActionEvent e) {
 		// If the source of the event was our "close" option
-		if (e.getSource() == close || e.getSource() == closeButton)
-			this.dispose(); // dispose all resources and close the application
+		if (e.getSource() == close || e.getSource() == execButton)
+			this.executeCode();
 
 		// If the source was the "new" file option
 		else if (e.getSource() == newFile || e.getSource() == newButton) {
@@ -383,14 +464,7 @@ public class UI extends JFrame implements ActionListener {
 			new Find(textArea);
 		}
 
-		// About Me
-		else if (e.getSource() == aboutMe || e.getSource() == aboutMeButton) {
-			new About().me();
-		}
-		// About Software
-		else if (e.getSource() == aboutSoftware || e.getSource() == aboutButton) {
-			new About().software();
-		}
+		
 
 	}
 

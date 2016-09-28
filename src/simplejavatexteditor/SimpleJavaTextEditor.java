@@ -14,6 +14,8 @@
  * @modifiedby  Achintha Gunasekara
  * @modweb      http://www.achinthagunasekara.com
  * @modemail    contact@achinthagunasekara.com
+ * 
+ * @modifiedby  Evil Knievel and the Elastic Community
  */
 
 package simplejavatexteditor;
@@ -23,10 +25,8 @@ import javax.swing.JTextPane;
 public class SimpleJavaTextEditor extends JTextPane {
 	
 	private static final long serialVersionUID = 1L;
-	public final static String AUTHOR_EMAIL = "pierrehenrysoria@gmail.com";
-	public final static String NAME = "PHNotePad";
-        public final static String EDITOR_EMAIL = "contact@achinthagunasekara.com";
-	public final static double VERSION = 3.0;
+	public final static String NAME = "Elastic PL Editor";
+	public final static double VERSION = 1.0;
 
 	/**
 	 * @param args
